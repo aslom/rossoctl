@@ -17,7 +17,11 @@ part.
 
 <!-- VERIFY v0.9.0: confirm the CA path, the service commands, the log path and the port against a
      v0.9.0 install. The laptop install (install.sh, abctl service, the launchd/systemd units) is a
-     release target; see cortex#944 and cortex#945. -->
+     release target; see cortex#944 and cortex#945.
+     The supervisor tables under "You must stop the service to run Cortex yourself" state behaviour
+     read from controlService, loadService and unloadService in cmd/abctl/cmd_service_platform.go on
+     cortex main, and the port message from the preflight loop in scripts/install.sh. Confirm each
+     one against a v0.9.0 binary. -->
 
 ### The certificate authority is not trusted
 
@@ -49,6 +53,97 @@ lsof -nP -iTCP@127.0.0.1:47600 -sTCP:LISTEN
 
 If the program is a previous Cortex service, stop it with `abctl service stop`. If it is another
 program, stop that program, or change the ports of Cortex.
+
+The installer reports another program even when the program is the Cortex service:
+
+```
+error: port 47600 is already in use by something else. Free it, or change the ports in
+/Users/you/.cortex/config.yaml, then re-run.
+```
+
+The installer reports this message only when it finds no file at `~/.cortex/config.yaml`. With that
+file present, the installer continues, and `abctl service install` adopts the Cortex that holds the
+ports. The installer reads that path from the `HOME` variable of your shell, so a shell with a
+different `HOME` reads a different directory. The installer then does not recognize its own service.
+
+Run `abctl service status` to confirm that the service holds the port. To stop it, read
+[You must stop the service to run Cortex yourself](#you-must-stop-the-service-to-run-cortex-yourself).
+
+### You must stop the service to run Cortex yourself
+
+`abctl service` controls the supervisor of your operating system. On macOS it controls `launchd`. On
+Linux it controls `systemd`. To run your own Cortex process, stop the service first. The service
+holds port 47600, and two programs cannot hold one port.
+
+```bash
+abctl service stop
+```
+
+The command states the result, and the command that undoes it:
+
+```
+Stopped, and it will stay stopped across logins.
+  abctl service start
+```
+
+A stop persists. Cortex does not run again at your next login, and it does not run again after you
+restart the computer.
+
+Claude Code fails while the proxy is not running. The install fixes the proxy address in the
+environment of Claude Code, and Claude Code cannot use a direct connection instead. To remove that
+dependency, run `abctl configure claude-code disable`.
+
+#### What each command does to the supervisor
+
+On macOS, the service is the `launchd` label `io.rossoctl.cortex`, in the `gui/<uid>` domain.
+
+| Command | What it does on macOS |
+| --- | --- |
+| `abctl service stop` | Runs `launchctl bootout`, and then `launchctl disable`. |
+| `abctl service start` | Runs `launchctl enable`, which clears the disable, and then loads the label and starts it. |
+| `abctl service restart` | Boots out the label, and then loads it and starts it again. |
+| `abctl service uninstall` | Runs `launchctl bootout`, and removes the `plist` file from `~/Library/LaunchAgents`. |
+
+A stop needs both steps. `launchctl bootout` removes the job from the running domain, and the `plist`
+file stays in `~/Library/LaunchAgents`. Launchd reads that file again at your next login, and Cortex
+starts again. `launchctl disable` writes to the disabled database of your user account, and that
+database persists.
+
+`abctl service install` also runs `launchctl enable`. A disable from an earlier stop therefore blocks
+no later install, and no later start.
+
+On Linux, the service is the `systemd` user unit `cortex.service`.
+
+| Command | What it does on Linux |
+| --- | --- |
+| `abctl service stop` | Runs `systemctl --user disable --now cortex.service`. |
+| `abctl service start` | Runs `systemctl --user enable --now cortex.service`. |
+| `abctl service uninstall` | Disables the unit, removes the unit file, and undoes the lingering that `abctl` enabled. |
+
+Both platforms give one meaning to a stop: the service stays stopped until you start it.
+
+#### Confirm that the service is stopped
+
+```bash
+abctl service status
+```
+
+On macOS, you can also read the disabled database:
+
+```bash
+launchctl print-disabled gui/$(id -u) | grep io.rossoctl.cortex
+```
+
+A service that you stopped reports the disable:
+
+```
+"io.rossoctl.cortex" => disabled
+```
+
+:::note
+`abctl service uninstall` removes the service, and it keeps your data. Your configuration and your
+certificate authority stay in `~/.cortex`.
+:::
 
 ### The service does not start, or starts and stops
 
