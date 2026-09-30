@@ -56,9 +56,8 @@ program, stop that program, or change the ports of Cortex.
 
 The installer reports another program even when the program is the Cortex service:
 
-```
-error: port 47600 is already in use by something else. Free it, or change the ports in
-/Users/you/.cortex/config.yaml, then re-run.
+```text
+error: port 47600 is already in use by something else. Free it, or change the ports in /Users/you/.cortex/config.yaml, then re-run.
 ```
 
 The installer reports this message only when it finds no file at `~/.cortex/config.yaml`. With that
@@ -81,7 +80,7 @@ abctl service stop
 
 The command states the result, and the command that undoes it:
 
-```
+```text
 Stopped, and it will stay stopped across logins.
   abctl service start
 ```
@@ -89,9 +88,11 @@ Stopped, and it will stay stopped across logins.
 A stop persists. Cortex does not run again at your next login, and it does not run again after you
 restart the computer.
 
-Claude Code fails while the proxy is not running. The install fixes the proxy address in the
-environment of Claude Code, and Claude Code cannot use a direct connection instead. To remove that
-dependency, run `abctl configure claude-code disable`.
+If you installed with `--claude-code`, Claude Code fails while the proxy is not running. That install
+fixes the proxy address in the environment of Claude Code, and Claude Code cannot use a direct
+connection instead. To remove that dependency, run `abctl configure claude-code disable`. An install
+without `--claude-code` configures no agent, so a stop affects only the agents that you pointed at
+the proxy yourself.
 
 #### What each command does to the supervisor
 
@@ -101,7 +102,7 @@ On macOS, the service is the `launchd` label `io.rossoctl.cortex`, in the `gui/<
 | --- | --- |
 | `abctl service stop` | Runs `launchctl bootout`, and then `launchctl disable`. |
 | `abctl service start` | Runs `launchctl enable`, which clears the disable, and then loads the label and starts it. |
-| `abctl service restart` | Boots out the label, and then loads it and starts it again. |
+| `abctl service restart` | Boots out the label, and then loads it and starts it again. This also runs `launchctl enable`, so it clears the disable. |
 | `abctl service uninstall` | Runs `launchctl bootout`, and removes the `plist` file from `~/Library/LaunchAgents`. |
 
 A stop needs both steps. `launchctl bootout` removes the job from the running domain, and the `plist`
@@ -136,9 +137,12 @@ launchctl print-disabled gui/$(id -u) | grep io.rossoctl.cortex
 
 A service that you stopped reports the disable:
 
-```
+```text
 "io.rossoctl.cortex" => disabled
 ```
+
+The command prints nothing when the label has no entry in that database, which means that you did not
+stop the service.
 
 :::note
 `abctl service uninstall` removes the service, and it keeps your data. Your configuration and your

@@ -83,6 +83,13 @@ abctl service stop
 abctl service start
 ```
 
+`abctl service` controls the supervisor of your operating system, which is `launchd` on macOS and
+`systemd` on Linux. A stop persists across a login, and a start undoes it.
+
+To read what each command does to the supervisor, and to stop the service so that you can run your own
+Cortex process, read
+[You must stop the service to run Cortex yourself](../operate/troubleshooting.md#you-must-stop-the-service-to-run-cortex-yourself).
+
 ## Stop and remove
 
 To stop the traffic for one session, quit `abctl observe` with `q` and stop your agent. RossoCortex
