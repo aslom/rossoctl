@@ -86,9 +86,12 @@ the service, read
 
 ### Two installs on one machine fight over the ports
 
-<!-- VERIFY v0.9.0: the port set comes from the --local preset in
-     authbridge/cmd/authbridge-proxy/local.go, and the 30-second restart ceiling from
-     superviseMaxDelay in supervise.go. Confirm both against a release binary. -->
+<!-- VERIFY: the port set comes from the --local preset in cmd/cortex/local.go, and the
+     30-second restart ceiling from superviseMaxDelay in cmd/cortex/supervise.go. Confirmed
+     against v0.8.1: a second install repeated the bind failure with restart_in growing 2s, 4s,
+     8s, 16s and then holding at 30s. `cortex --local` binds four of the five ports and skips the
+     transparent listener; `cortex --config <file>`, which is how the service runs, binds all
+     five and logs "transparent proxy listening addr=127.0.0.1:47603". -->
 
 **The ports are fixed, so two installs cannot coexist.** The `--local` preset pins every listener to
 a literal port, not to a free one, so the second install to start never binds. This is the condition
@@ -124,7 +127,7 @@ second checkout, a container that mounts your home directory — as well as the 
 **Confirm it.** List every proxy process:
 
 ```bash
-ps auxww | grep authbridge-proxy | grep -v grep
+ps auxww | grep cortex | grep -v grep
 ```
 
 Read the `--config` path, or the binary path, on each line: those are your installs. One supervisor
