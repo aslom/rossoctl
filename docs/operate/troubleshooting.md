@@ -176,11 +176,13 @@ programs such as Claude Code, and add the CA to the keychain for anything else.
 
 <!-- VERIFY: the tables below state behaviour read from controlService, loadService and
      unloadService in cmd/agentop/cmd_service_platform.go, and the stop output from the "stop"
-     arm of serviceControl in cmd_service.go. Reproduced against v0.8.1 binaries on macOS: the
-     print-disabled output format below, the port message from the preflight loop in
-     scripts/install.sh, and the fact that the message depends on $HOME/.cortex/config.yaml.
-     The launchd transitions that stop, start and uninstall perform are read from the source
-     only; confirm those against a release binary. -->
+     arm of serviceControl in cmd_service.go. Confirmed against a v0.8.1 install on macOS: the
+     plist path, the print-disabled output format below, that install clears an earlier disable
+     (the label read "disabled" before an install and "enabled" after it), the port message from
+     the preflight loop in scripts/install.sh, that the message depends on
+     $HOME/.cortex/config.yaml, and that a second install under a different HOME adopts nothing
+     and repeats a bind failure instead. Still read from the source only: that a stop survives a
+     login, and that an uninstall leaves an earlier disable in place. -->
 
 `agentop service` controls the supervisor of your operating system. On macOS it controls
 `launchd`. On Linux it controls `systemd`. To run your own Cortex process, stop the service first.
