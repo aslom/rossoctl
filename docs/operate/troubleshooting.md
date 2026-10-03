@@ -56,6 +56,11 @@ lsof -nP -iTCP@127.0.0.1:47600 -sTCP:LISTEN
 If the program is a previous Cortex service, stop it with `agentop service stop`. If it is another
 program, stop that program, or change the ports of Cortex.
 
+If the program is *another Cortex install*, read
+[Two installs on one machine fight over the ports](#two-installs-on-one-machine-fight-over-the-ports)
+instead: the port is the symptom, and stopping the wrong one of the two costs you the rest of the
+day.
+
 The installer reports another program even when the program is the Cortex service:
 
 ```text
@@ -63,18 +68,20 @@ error: port 47600 is already in use by something else. Free it, or change the po
 ```
 
 The installer reports this message only when it finds no file at `~/.cortex/config.yaml`. With
-that file present, the installer continues, and `agentop service install` adopts the Cortex that
-holds the ports. The installer reads that path from the `HOME` variable of your shell, so a shell
-with a different `HOME` reads a different directory. The installer then does not recognize its own
-service.
+that file present, the installer continues past the port check. The installer reads that path from
+the `HOME` variable of your shell, so a shell with a different `HOME` reads a different directory.
+The installer then does not recognize its own service.
 
-Run `agentop service status` to confirm that the service holds the port. To stop it, read
+An install that you re-run from its own `HOME` adopts the Cortex that holds the ports. It reads the
+process identifier from `~/.cortex/proxy.pid`, stops that process, and starts it again under the
+supervisor. An install under a different `HOME` reads a different `proxy.pid`, so it adopts
+nothing. It installs, and then it repeats a bind failure and a restart. Read
+[Two installs on one machine fight over the ports](#two-installs-on-one-machine-fight-over-the-ports).
+
+Run `agentop service status` from the shell that installed the service to confirm that the service
+holds the port. That command reads `$HOME` too, so another shell reports `not installed`. To stop
+the service, read
 [You must stop the service to run Cortex yourself](#you-must-stop-the-service-to-run-cortex-yourself).
-
-If the program is *another Cortex install*, read
-[Two installs on one machine fight over the ports](#two-installs-on-one-machine-fight-over-the-ports)
-instead: the port is the symptom, and stopping the wrong one of the two costs you the rest of the
-day.
 
 ### Two installs on one machine fight over the ports
 
@@ -167,11 +174,13 @@ programs such as Claude Code, and add the CA to the keychain for anything else.
 
 ### You must stop the service to run Cortex yourself
 
-<!-- VERIFY v0.9.0: the supervisor tables below state behaviour read from controlService,
-     loadService and unloadService in cmd/agentop/cmd_service_platform.go on cortex main, the
-     stop output from the "stop" arm of serviceControl in cmd_service.go, and the port
-     message from the preflight loop in scripts/install.sh. Confirm each one against a release
-     binary. -->
+<!-- VERIFY: the tables below state behaviour read from controlService, loadService and
+     unloadService in cmd/agentop/cmd_service_platform.go, and the stop output from the "stop"
+     arm of serviceControl in cmd_service.go. Reproduced against v0.8.1 binaries on macOS: the
+     print-disabled output format below, the port message from the preflight loop in
+     scripts/install.sh, and the fact that the message depends on $HOME/.cortex/config.yaml.
+     The launchd transitions that stop, start and uninstall perform are read from the source
+     only; confirm those against a release binary. -->
 
 `agentop service` controls the supervisor of your operating system. On macOS it controls
 `launchd`. On Linux it controls `systemd`. To run your own Cortex process, stop the service first.
