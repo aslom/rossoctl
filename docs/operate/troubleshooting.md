@@ -79,7 +79,8 @@ nothing. It installs, and then it repeats a bind failure and a restart. Read
 [Two installs on one machine fight over the ports](#two-installs-on-one-machine-fight-over-the-ports).
 
 Run `agentop service status` from the shell that installed the service to confirm that the service
-holds the port. That command reads `$HOME` too, so another shell reports `not installed`. To stop
+is installed. That command reads `$HOME` too, so another shell reports `not installed`. It does not
+tell you which install holds the port, because it asks the port rather than the supervisor. To stop
 the service, read
 [You must stop the service to run Cortex yourself](#you-must-stop-the-service-to-run-cortex-yourself).
 
@@ -239,11 +240,7 @@ Both platforms give one meaning to a stop: the service stays stopped until you s
 
 #### Confirm that the service is stopped
 
-```bash
-agentop service status
-```
-
-On macOS, you can also read the disabled database:
+Ask the supervisor, and not the port. On macOS, read the disabled database:
 
 ```bash
 launchctl print-disabled gui/$(id -u) | grep io.rossoctl.cortex
@@ -257,6 +254,23 @@ A service that you stopped reports the disable:
 
 The command prints nothing when the label has no entry in that database, which means that you did
 not stop the service.
+
+On Linux, ask `systemd`. A service that you stopped reports `disabled`:
+
+```bash
+systemctl --user is-enabled cortex.service
+```
+
+:::caution[`agentop service status` can report `healthy` after a stop]
+The `healthy` line of that command is a request to the health port. It is not a question to the
+supervisor, so any program that holds the port answers it. With a second Cortex install on the
+machine, the command reports `healthy` immediately after you stop your service, because the other
+install replies. Read
+[Two installs on one machine fight over the ports](#two-installs-on-one-machine-fight-over-the-ports).
+
+The rest of that output stays reliable. `agentop service status` reads the unit file, so the
+`installed` line and the `not installed` line both state the truth.
+:::
 
 :::note
 `agentop service uninstall` removes the service, and it keeps your data. Your configuration and your
