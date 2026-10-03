@@ -175,15 +175,18 @@ programs such as Claude Code, and add the CA to the keychain for anything else.
 
 ### You must stop the service to run Cortex yourself
 
-<!-- VERIFY: the tables below state behaviour read from controlService, loadService and
-     unloadService in cmd/agentop/cmd_service_platform.go, and the stop output from the "stop"
-     arm of serviceControl in cmd_service.go. Confirmed against a v0.8.1 install on macOS: the
-     plist path, the print-disabled output format below, that install clears an earlier disable
-     (the label read "disabled" before an install and "enabled" after it), the port message from
-     the preflight loop in scripts/install.sh, that the message depends on
-     $HOME/.cortex/config.yaml, and that a second install under a different HOME adopts nothing
-     and repeats a bind failure instead. Still read from the source only: that a stop survives a
-     login, and that an uninstall leaves an earlier disable in place. -->
+<!-- VERIFY: confirmed against a v0.8.1 install on macOS, with the output copied from a
+     terminal. The stop output; the plist path; the print-disabled format below; that a stop
+     disables the label and boots it out of the domain; that an uninstall removes the plist and
+     LEAVES that disable in place; that a later install clears it (the label read "disabled"
+     before an install and "enabled" after it); the port message from the preflight loop in
+     scripts/install.sh, and that it depends on $HOME/.cortex/config.yaml; and that a second
+     install under a different HOME adopts nothing and repeats a bind failure instead. The
+     tables also agree with controlService, loadService and unloadService in
+     cmd/agentop/cmd_service_platform.go. -->
+<!-- VERIFY v0.9.0: one claim is still unconfirmed by observation — that a stop survives a
+     LOGIN. Testing it needs a logout. It is read from the launchctl disable that `stop` writes,
+     which persists in the per-user disabled database. -->
 
 `agentop service` controls the supervisor of your operating system. On macOS it controls
 `launchd`. On Linux it controls `systemd`. To run your own Cortex process, stop the service first.
@@ -319,11 +322,16 @@ cortex#946 and cortex#947.
 
 The agent runs, but `agentop observe` shows no events. Check each cause in order:
 
-1. **The service does not run.** Run `agentop service status`.
+1. **The service does not run.** Run `agentop service status`. Read the caution in
+   [Confirm that the service is stopped](#confirm-that-the-service-is-stopped) first: the `healthy`
+   line probes the port, so another install answers it.
 2. **The agent does not use the proxy.** For an agent that is not Claude Code, confirm that you set
    the proxy variable and the certificate variable. See
    [Other agents](../get-started/laptop.md#other-agents).
-3. **The agent sends no traffic yet.** Send a message to the agent, and watch for the events.
+3. **A second install holds the ports.** Your agent then reaches the install that won the port,
+   while you watch the other one. Read
+   [Two installs on one machine fight over the ports](#two-installs-on-one-machine-fight-over-the-ports).
+4. **The agent sends no traffic yet.** Send a message to the agent, and watch for the events.
 
 ### The numbers are wrong or absent
 
